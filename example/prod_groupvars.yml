@@ -1,0 +1,5 @@
+---
+all:
+  email: 'foo@bar.com'
+windows:
+  frobniz: True

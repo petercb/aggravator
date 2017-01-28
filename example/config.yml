@@ -1,0 +1,20 @@
+---
+environments:
+  prod:
+    include_hosts:
+      - prod_hosts.yml
+    include_group_vars:
+      - common.yml
+      - prod_groupvars.yml
+      - path: windows.yml
+        key: windows
+    include_host_vars:
+      - prod_hostvars.yml
+  dev:
+    include_hosts:
+      - dev_hosts.yml
+    include_group_vars:
+      - common.yml
+      - dev_groupvars.yml
+    include_host_vars:
+      - dev_hostvars.yml

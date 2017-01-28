@@ -1,0 +1,4 @@
+---
+all:
+  host_foo: 'poof.bar'
+  email: 'devnull@foo.bar'
