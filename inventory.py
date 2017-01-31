@@ -4,18 +4,22 @@
 Custom dynamic inventory script for Ansible, in Python.
 '''
 
+# pylint: disable=wrong-import-order
 # Support python 2 and 3
 from __future__ import (absolute_import, print_function)
 from future import standard_library
 standard_library.install_aliases()
-from builtins import object
+from builtins import object # pylint: disable=redefined-builtin
 
 # stdlib
 import argparse
 import json
 import os
 import sys
-from urllib.parse import (urlparse, urljoin)
+
+## This is the python3 name, formerly urlparse, install_aliases() above make
+## this work under python2
+from urllib.parse import (urlparse, urljoin) # pylint: disable=import-error
 
 # extras from packages
 import requests
@@ -54,6 +58,10 @@ def read_cli_args():
         '--show', action='store_true',
         help='Output a list of upstream environments'
     )
+    mutual_ops.add_argument(
+        '--tree', action='store_true',
+        help='Output a tree of what files will be loaded for an environment'
+    )
     return parser.parse_args()
 
 
@@ -84,7 +92,7 @@ def fetch_data_remote(url, requestsobj=None):
         requestsobj = requests
     response = requestsobj.get(url)
     if response.status_code == 404:
-        raise LookupError("Error: Failed to find data at: {}".format(url))
+        raise LookupError("Failed to find data at: {}".format(url))
     response.raise_for_status()
     if url.endswith('json'):
         return json.loads(response.text)
@@ -108,7 +116,7 @@ def fetch_data_local(localfile):
                 raise AttributeError(
                     "Unsupported data type: {}".format(os.path.splitext(localfile)[1])
                 )
-    raise LookupError("Error: failed to parse {}".format(localfile))
+    raise LookupError("failed to parse {}".format(localfile))
 
 
 def fetch_data(uri, requestsobj=None):
@@ -118,7 +126,87 @@ def fetch_data(uri, requestsobj=None):
         return fetch_data_local(uriobj.path)
     if uriobj.scheme in ['http', 'https']:
         return fetch_data_remote(uri, requestsobj)
-    raise AttributeError("Error: unsupported URI '{}'".format(uri))
+    raise AttributeError("unsupported URI '{}'".format(uri))
+
+
+def raise_for_type(item, types, section):
+    '''raise an AttributeError if `item` is not of `types`'''
+    type_names = None
+    if isinstance(types, tuple):
+        type_names = [t.__name__ for t in types]
+    elif isinstance(types, type):
+        type_names = types.__name__
+    else:
+        raise AttributeError(
+            "Invalid type '{}' for `types` parameter, must be type or tuple of types".format(
+                type(types).__name__
+            )
+        )
+    if not isinstance(item, types):
+        if isinstance(types, tuple):
+            ", ".join(types)
+        raise AttributeError(
+            "invalid type '{}' in section '{}', must be: {}".format(
+                type(item).__name__,
+                section,
+                type_names
+            )
+        )
+
+
+def merge_lists(list1, list2):
+    '''merge two lists, removing duplicates'''
+    return list(set(list1) | set(list2))
+
+
+def convert_host_list_to_dict(hostlist):
+    '''convert a list of hosts into dict structure'''
+    if isinstance(hostlist, list):
+        return {'hosts': hostlist}
+    elif isinstance(hostlist, dict):
+        return hostlist
+    else:
+        raise AttributeError('input object should be list or dict!')
+
+
+def host_dict_merge(dict1, dict2, section):
+    '''merge two host group dictionaries'''
+    data = dict1.copy()
+    for subkey in dict2:
+        if isinstance(dict2[subkey], list):
+            data[subkey] = merge_lists(
+                data.get(subkey, []),
+                dict2[subkey]
+            )
+        elif isinstance(dict2[subkey], dict):
+            # This is probably a `vars`, section. Not really supported
+            # but try to deal with it anyways
+            data[subkey] = data.get(subkey, {})
+            data[subkey].update(dict2[subkey])
+        else:
+            raise_for_type(dict2[subkey], (list, dict), ":".join([section, subkey]))
+    return data
+
+
+def host_group_iterate(obj1, obj2, section=''):
+    '''merge two host tree objects'''
+    data = obj1.copy()
+    data2 = obj2.copy()
+    for key in obj2:
+        if key == '_meta':
+            # skip this, we don't support defining _meta in hosts files
+            continue
+        if data.get(key) is None:
+            data[key] = data2[key]
+        else:
+            # Make sure structure is dict before continueing
+            data[key] = convert_host_list_to_dict(data[key])
+            # Convert input structure (if necessary)
+            raise_for_type(data2[key], (list, dict), ":".join([section, key]))
+            data2[key] = convert_host_list_to_dict(data2[key])
+            # merge them
+            data[key] = host_dict_merge(data[key], data2[key], section)
+    return data
 
 
 class Inventory(object):
@@ -150,7 +238,7 @@ class Inventory(object):
                 return fetch_data(urljoin(self.uri, uriobj.path))
         else:
             # Unsupported type
-            raise AttributeError("Error: '{}' type is unsupported".format(uriobj.scheme))
+            raise AttributeError("Unsupported type '{}'".format(uriobj.scheme))
 
     def fetch_merge_hosts(self, section):
         '''Fetch and merge hosts'''
@@ -160,22 +248,18 @@ class Inventory(object):
                 # Just a plain file listed with no extra properties
                 # Pull it in and assume there are sections
                 temp = self.fetch(inc)
-                for key in temp:
-                    data[key] = data.get(key, [])
-                    data[key] = list(set(data[key]) | set(temp[key]))
+                data = host_group_iterate(data, temp, section)
             elif isinstance(inc, dict):
-                # Dictionary listing, fetch file in `path` into keyspace in `key`
+                # Dictionary listing, fetch file in `path` into keyspace `key`
                 temp = self.fetch(inc['path'])
                 key = inc['key']
-                data[key] = data.get(key, [])
-                data[key] = list(set(data[key]) | set(temp[key]))
-            else:
-                raise AttributeError(
-                    "Error: unsupported entry in '{}' ({}), must be string or dict".format(
-                        section,
-                        type(inc).__name__
-                    )
+                data[key] = host_dict_merge(
+                    data.get(key, {}),
+                    convert_host_list_to_dict(temp),
+                    section
                 )
+            else:
+                raise_for_type(inc, (str, dict), section)
         return data
 
     def fetch_merge_vars(self, section):
@@ -196,12 +280,7 @@ class Inventory(object):
                 data[key] = data.get(key, {})
                 data[key].update(temp)
             else:
-                raise AttributeError(
-                    "Error: unsupported entry in '{}' ({}), must be string or dict".format(
-                        section,
-                        type(inc).__name__
-                    )
-                )
+                raise_for_type(inc, (str, dict), section)
         return data
 
     def generate_inventory(self):
@@ -214,19 +293,16 @@ class Inventory(object):
         # again with the --host param for every single host returned in --list
         invdata['_meta'] = invdata.get('_meta', {})
         invdata['_meta']['hostvars'] = invdata['_meta'].get('hostvars', {})
-        if not isinstance(invdata['_meta']['hostvars'], dict):
-            raise AttributeError("Error: hostvars must be a dictionary!")
+        raise_for_type(invdata['_meta']['hostvars'], dict, 'hostvars')
 
         # Merge the group vars over top of any defined in the inventory
         # No vars should be defined in the hosts files, and if it was, oh well, smushed
         for key in groupvars:
             invdata[key] = invdata.get(key, {})
-            gvtype = type(invdata[key])
-            if gvtype is list:
+            raise_for_type(invdata[key], (list, dict), ":".join(['groupvars', key]))
+            if isinstance(invdata[key], list):
                 # convert it to a dict
                 invdata[key] = {'hosts': invdata[key]}
-            elif gvtype is not dict:
-                raise AttributeError("Error: group '{}' is not list or dict!".format(key))
             invdata[key]['vars'] = invdata[key].get('vars', {})
             invdata[key]['vars'].update(groupvars[key])
 
@@ -240,14 +316,7 @@ class Inventory(object):
         mhvars = invdata['_meta']['hostvars']
         for key in hostvars:
             mhvars[key] = mhvars.get(key, {})
-            mhvtype = type(mhvars[key])
-            if mhvtype is not dict:
-                raise AttributeError(
-                    "Error: '{}' hostvars is '{}', must be a dictionary!".format(
-                        key,
-                        mhvtype.__name__
-                    )
-                )
+            raise_for_type(mhvars[key], dict, ":".join(['hostvars', key]))
             mhvars[key].update(hostvars[key])
 
         return invdata
@@ -265,7 +334,17 @@ def main():
     # Called with `--show`
     elif args.show:
         print("Upstream environments:")
-        print("\n".join(inv.fetch_environments()))
+        print("\n".join(sorted(inv.fetch_environments())))
+
+    # Called with `--tree`
+    elif args.tree:
+        if args.env is None:
+            print(yaml.dump(inv.config.get('environments', {}), default_flow_style=False))
+        else:
+            print(yaml.dump(
+                inv.config.get('environments', {}).get(args.env),
+                default_flow_style=False
+            ))
 
     else:
         if args.env is None:
