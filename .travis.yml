@@ -1,4 +1,4 @@
 language: python
 python:
   - "2.7"
-script: python inventory.py --uri=examples/config.yml --env=prod --list
+script: python inventory.py --uri=example/config.yml --env=prod --list
