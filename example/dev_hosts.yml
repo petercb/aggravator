@@ -1,0 +1,9 @@
+---
+monitoring:
+  - mon1.dev.foo
+  - mon2.dev.foo
+app:
+  - app1.dev.bar
+  - app2.dev.bar
+windows:
+  - cement1.dev.bar
