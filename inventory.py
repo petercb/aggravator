@@ -2,6 +2,12 @@
 
 '''
 Custom dynamic inventory script for Ansible, in Python.
+
+This script will read in a configuration file either locally or fetched via HTTP and will
+output a JSON data structure describing the inventory by merging the files as listed in
+the config file.
+
+Files can be in either YAML or JSON format
 '''
 
 # pylint: disable=wrong-import-order
