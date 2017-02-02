@@ -44,7 +44,7 @@ def read_cli_args():
     )
     parser.add_argument(
         '--uri', action='store',
-        default=os.environ.get('INVENTORY_URL'),
+        default=os.environ.get('INVENTORY_URI', 'config.yaml'),
         help='specify the URI to query for inventory config file, supports file:// and http(s)://'
     )
     mutual_ops = parser.add_mutually_exclusive_group(required=True)
