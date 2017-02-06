@@ -1,5 +1,5 @@
 ---
 all:
   email: 'foo@bar.com'
-windows:
-  frobniz: True
+#windows:
+#  frobniz: True
