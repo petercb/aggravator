@@ -3,16 +3,18 @@ environments:
   prod:
     include:
       - prod_hosts.yml
-      - common.yml
+      - path: common.yml
+        key: all/vars
       - prod_groupvars.yml
-#      - path: windows.yml
-#        key: windows/vars
+      - path: windows.yml
+        key: windows/vars
       - path: prod_hostvars.yml
         key: _meta/hostvars
   dev:
     include:
       - dev_hosts.yml
-      - common.yml
+      - path: common.yml
+        key: all/vars
       - dev_groupvars.yml
       - path: dev_hostvars.yml
         key: _meta/hostvars

@@ -161,6 +161,17 @@ def raise_for_type(item, types, section):
         )
 
 
+def convert_host_list_to_dict(inv):
+    '''
+    Iterate over the inventory data structure and convert any host groups that
+    are lists into dictionary form
+    '''
+    for group in inv:
+        if isinstance(inv[group], list):
+            # needs converting
+            inv[group] = {'hosts': inv[group]}
+
+
 class Inventory(object):
     '''Retrieve Ansible inventory from available sources and return as JSON'''
     def __init__(self, uri, env=None):
@@ -208,6 +219,7 @@ class Inventory(object):
         }
         # start merging
         for inc in self.config.get('environments', {}).get(self.env, {}).get('include', []):
+            convert_host_list_to_dict(invdata)
             if isinstance(inc, str) or (isinstance(inc, dict) and 'key' not in inc):
                 # Just a plain file listed with no extra properties
                 # Pull it in and hope there are proper sections

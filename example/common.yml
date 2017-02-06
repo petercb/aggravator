@@ -1,4 +1,3 @@
 ---
-all:
-  host_foo: 'poof.bar'
-  email: 'devnull@foo.bar'
+host_foo: 'poof.bar'
+email: 'devnull@foo.bar'

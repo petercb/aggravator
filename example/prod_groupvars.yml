@@ -1,5 +1,7 @@
 ---
 all:
-  email: 'foo@bar.com'
+  vars:
+    email: 'foo@bar.com'
 windows:
-  frobniz: True
+  vars:
+    frobniz: True
