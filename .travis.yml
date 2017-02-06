@@ -5,4 +5,6 @@ addons:
   apt:
     packages:
       - jq
-script: python inventory.py --uri=example/config.yml --env=prod --list | jq -S
+script:
+  - python inventory.py --uri=example/config.yml --env=prod --list > output.json
+  - jq -S output.json
