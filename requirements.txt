@@ -1,3 +1,4 @@
+dpath
 future
 requests
 pyyaml

@@ -28,6 +28,7 @@ import sys
 from urllib.parse import (urlparse, urljoin) # pylint: disable=import-error
 
 # extras from packages
+import dpath.util
 import requests
 import yaml
 
@@ -160,61 +161,6 @@ def raise_for_type(item, types, section):
         )
 
 
-def merge_lists(list1, list2):
-    '''merge two lists, removing duplicates'''
-    return list(set(list1) | set(list2))
-
-
-def convert_host_list_to_dict(hostlist):
-    '''convert a list of hosts into dict structure'''
-    if isinstance(hostlist, list):
-        return {'hosts': hostlist}
-    elif isinstance(hostlist, dict):
-        return hostlist
-    else:
-        raise AttributeError('input object should be list or dict!')
-
-
-def host_dict_merge(dict1, dict2, section):
-    '''merge two host group dictionaries'''
-    data = dict1.copy()
-    for subkey in dict2:
-        if isinstance(dict2[subkey], list):
-            data[subkey] = merge_lists(
-                data.get(subkey, []),
-                dict2[subkey]
-            )
-        elif isinstance(dict2[subkey], dict):
-            # This is probably a `vars`, section. Not really supported
-            # but try to deal with it anyways
-            data[subkey] = data.get(subkey, {})
-            data[subkey].update(dict2[subkey])
-        else:
-            raise_for_type(dict2[subkey], (list, dict), ":".join([section, subkey]))
-    return data
-
-
-def host_group_iterate(obj1, obj2, section=''):
-    '''merge two host tree objects'''
-    data = obj1.copy()
-    data2 = obj2.copy()
-    for key in obj2:
-        if key == '_meta':
-            # skip this, we don't support defining _meta in hosts files
-            continue
-        if data.get(key) is None:
-            data[key] = data2[key]
-        else:
-            # Make sure structure is dict before continueing
-            data[key] = convert_host_list_to_dict(data[key])
-            # Convert input structure (if necessary)
-            raise_for_type(data2[key], (list, dict), ":".join([section, key]))
-            data2[key] = convert_host_list_to_dict(data2[key])
-            # merge them
-            data[key] = host_dict_merge(data[key], data2[key], section)
-    return data
-
-
 class Inventory(object):
     '''Retrieve Ansible inventory from available sources and return as JSON'''
     def __init__(self, uri, env=None):
@@ -246,84 +192,39 @@ class Inventory(object):
             # Unsupported type
             raise AttributeError("Unsupported type '{}'".format(uriobj.scheme))
 
-    def fetch_merge_hosts(self, section):
-        '''Fetch and merge hosts'''
-        data = {}
-        for inc in self.config.get('environments', {}).get(self.env, {}).get(section, []):
-            if isinstance(inc, str):
-                # Just a plain file listed with no extra properties
-                # Pull it in and assume there are sections
-                temp = self.fetch(inc)
-                data = host_group_iterate(data, temp, section)
-            elif isinstance(inc, dict):
-                # Dictionary listing, fetch file in `path` into keyspace `key`
-                temp = self.fetch(inc['path'])
-                key = inc['key']
-                data[key] = host_dict_merge(
-                    data.get(key, {}),
-                    convert_host_list_to_dict(temp),
-                    section
-                )
-            else:
-                raise_for_type(inc, (str, dict), section)
-        return data
-
-    def fetch_merge_vars(self, section):
-        '''Fetch and merge variables'''
-        data = {}
-        for inc in self.config.get('environments', {}).get(self.env, {}).get(section, []):
-            if isinstance(inc, str):
-                # Just a plain file listed with no extra properties
-                # Pull it in and assume there are sections
-                temp = self.fetch(inc)
-                for key in temp:
-                    data[key] = data.get(key, {})
-                    data[key].update(temp[key])
-            elif isinstance(inc, dict):
-                # Dictionary listing, fetch file in `path` into keyspace in `key`
-                temp = self.fetch(inc['path'])
-                key = inc['key']
-                data[key] = data.get(key, {})
-                data[key].update(temp)
-            else:
-                raise_for_type(inc, (str, dict), section)
-        return data
 
     def generate_inventory(self):
         '''Generate inventory by merging hosts and variables'''
-        groupvars = self.fetch_merge_vars('include_group_vars')
-        hostvars = self.fetch_merge_vars('include_host_vars')
-        invdata = self.fetch_merge_hosts('include_hosts')
-
-        # Make sure _meta with hostvars section exists, this prevents ansible calling this script
-        # again with the --host param for every single host returned in --list
-        invdata['_meta'] = invdata.get('_meta', {})
-        invdata['_meta']['hostvars'] = invdata['_meta'].get('hostvars', {})
-        raise_for_type(invdata['_meta']['hostvars'], dict, 'hostvars')
-
-        # Merge the group vars over top of any defined in the inventory
-        # No vars should be defined in the hosts files, and if it was, oh well, smushed
-        for key in groupvars:
-            invdata[key] = invdata.get(key, {})
-            raise_for_type(invdata[key], (list, dict), ":".join(['groupvars', key]))
-            if isinstance(invdata[key], list):
-                # convert it to a dict
-                invdata[key] = {'hosts': invdata[key]}
-            invdata[key]['vars'] = invdata[key].get('vars', {})
-            invdata[key]['vars'].update(groupvars[key])
-
-        # Set the platform_name var if not already set
-        invdata['all'] = invdata.get('all', {})
-        invdata['all']['vars'] = invdata['all'].get('vars', {})
-        invdata['all']['vars']['platform_name'] = invdata['all']['vars'].get(
-            'platform_name', self.env)
-
-        # Merge in host vars
-        mhvars = invdata['_meta']['hostvars']
-        for key in hostvars:
-            mhvars[key] = mhvars.get(key, {})
-            raise_for_type(mhvars[key], dict, ":".join(['hostvars', key]))
-            mhvars[key].update(hostvars[key])
+        # Set the basic structure
+        invdata = {
+            '_meta': {
+                'hostvars': {}
+            },
+            'all': {
+                'vars': {
+                    'platform_name': self.env
+                }
+            }
+        }
+        # start merging
+        for inc in self.config.get('environments', {}).get(self.env, {}).get('include', []):
+            if isinstance(inc, str) or (isinstance(inc, dict) and 'key' not in inc):
+                # Just a plain file listed with no extra properties
+                # Pull it in and hope there are proper sections
+                # TODO: add some schema validation
+                from_file = self.fetch(inc)
+                dpath.util.merge(invdata, from_file, flags=dpath.util.MERGE_TYPESAFE)
+            elif isinstance(inc, dict):
+                # Dictionary listing, fetch file in `path` into keyspace `key`
+                from_file = self.fetch(inc['path'])
+                key = inc['key']
+                try:
+                    data = dpath.util.get(invdata, key)
+                    dpath.util.merge(data, from_file, flags=dpath.util.MERGE_TYPESAFE)
+                except KeyError:
+                    dpath.util.new(invdata, key, from_file)
+            else:
+                raise_for_type(inc, (str, dict), ':'.join(['', self.env, 'include']))
 
         return invdata
 
