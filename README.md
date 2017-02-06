@@ -1,5 +1,5 @@
-# ansible-file-inventory
+# Aggravator
 
-[![Build Status](https://travis-ci.org/petercb/ansible-file-inventory.svg?branch=master)](https://travis-ci.org/petercb/ansible-file-inventory)
+[![Build Status](https://travis-ci.org/petercb/aggravator.svg?branch=master)](https://travis-ci.org/petercb/aggravator)
 
-Dynamic inventory script for Ansible that generates content from files
+Dynamic inventory script for Ansible that aggregates information from other sources
