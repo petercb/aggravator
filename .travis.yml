@@ -7,4 +7,4 @@ addons:
       - jq
 script:
   - python inventory.py --uri=example/config.yml --env=prod --list > output.json
-  - jq -S output.json
+  - jq -S . output.json
