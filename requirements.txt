@@ -1,4 +1,0 @@
-dpath
-future
-requests
-pyyaml
