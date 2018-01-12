@@ -166,7 +166,7 @@ class Inventory(object):
         if uriobj.scheme == '':
             # Unspecified URI type, assume relative to config URI
             return fetch_data(
-                urljoin(self.uri, uriobj.path),
+                urljoin(str(self.uri), uriobj.path),
                 self.session,
                 data_type,
                 self.vault_password
