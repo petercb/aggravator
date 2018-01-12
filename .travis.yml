@@ -8,5 +8,5 @@ addons:
 install:
   - python setup.py install
 script:
-  - inventory --uri=example/config.yml --env=prod --list > output.json
+  - inventory --vault-password-file=/dev/null --uri=example/config.yml --env=prod --list > output.json
   - jq -S . output.json
