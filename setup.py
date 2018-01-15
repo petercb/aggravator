@@ -6,7 +6,9 @@ setup(
     description='Ansible inventory script to aggregate other inventory sources',
     author='Peter Burns',
     author_email='pcburns@outlook.com',
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests*']),
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     install_requires = [
         'ansible',
         'requests',
