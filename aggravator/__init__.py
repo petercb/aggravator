@@ -35,6 +35,20 @@ import ansible.parsing.vault as vault
 from ansible.module_utils._text import to_text
 
 
+def get_config():
+    '''Determine location of root config file if none specified'''
+    self_path = os.path.dirname(os.path.realpath(sys.argv[0]))
+    check_paths = [
+        os.path.abspath(os.path.join(self_path, '..', 'etc', 'config.yaml')),
+        '/etc/aggravator/config.yaml',
+        '/usr/local/etc/aggravator/config.yaml'
+    ]
+    for fp in check_paths:
+        if os.path.isfile(fp):
+            return fp
+    return None
+
+
 def get_environment():
     '''Determine the platform/environment name from name of called script'''
     myname = os.path.basename(sys.argv[0])
@@ -46,6 +60,7 @@ def get_environment():
 
 def create_links(environments, directory):
     '''Create symlinks for platform inventories'''
+    errcount = 0
     for ename in environments:
         try:
             os.symlink(
@@ -54,6 +69,8 @@ def create_links(environments, directory):
             )
         except(OSError) as err:
             click.echo("This symlink might already exist. Leaving it unchanged. Error: %s" % (err))
+            errcount += 1
+    return errcount
 
 
 def fetch_data_remote(url, requestsobj=requests):
@@ -238,7 +255,7 @@ class Inventory(object):
 )
 @click.option(
     '--uri', envvar='INVENTORY_URI', show_default=True,
-    default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'etc', 'config.yaml'),
+    default=get_config(),
     help='specify the URI to query for inventory config file, supports file:// and http(s)://'
 )
 @click.option(
@@ -276,22 +293,26 @@ def cli(env, uri, vpfile, list, host, linkdir, show, tree):
 
     # Called with `--createlinks`
     if linkdir:
-        create_links(inv.fetch_environments(), linkdir)
+        return create_links(inv.fetch_environments(), linkdir)
 
     # Called with `--show`
     elif show:
         click.echo("Upstream environments:")
         click.echo("\n".join(sorted(inv.fetch_environments())))
+        return 0
 
     # Called with `--tree`
     elif tree:
+        data = ''
         if env is None:
-            click.echo(yaml.dump(inv.config.get('environments', {}), default_flow_style=False))
+            data = yaml.dump(inv.config.get('environments', {}), default_flow_style=False)
         else:
-            click.echo(yaml.dump(
+            data = yaml.dump(
                 inv.config.get('environments', {}).get(env),
                 default_flow_style=False
-            ))
+            )
+        click.echo(data)
+        return 0
 
     else:
         if env is None:
@@ -309,8 +330,10 @@ def cli(env, uri, vpfile, list, host, linkdir, show, tree):
                 # Not implemented, since we should return _meta info in `--list`.
                 data = {}
 
-            # This should never happen since argparse should require either --list or --host
+            # require either --list or --host
             else:
-                data = {"_meta": {"hostvars": {}}}
+                click.echo("Error: Missing parameter (--list or --host)?")
+                return 1
 
             click.echo(json.dumps(data))
+            return 0
