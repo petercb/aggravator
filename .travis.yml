@@ -3,6 +3,7 @@ python:
   - "2.7"
 install:
   - python setup.py install
+  - pip install coverage
 script:
   - coverage run --source=aggravator setup.py test
   - coverage report -m
