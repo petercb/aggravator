@@ -2,8 +2,12 @@ from setuptools import setup, find_packages
 
 setup(
     name='aggravator',
-    version='0.3',
+    version='0.3.1',
     description='Ansible inventory script to aggregate other inventory sources',
+    long_description=open('README.rst').read(),
+    license='MIT',
+    url='https://github.com/petercb/aggravator',
+    keywords='ansible',
     author='Peter Burns',
     author_email='pcburns@outlook.com',
     packages=find_packages(exclude=['tests*']),
