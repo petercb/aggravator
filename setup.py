@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='aggravator',
-    version='0.3.1',
+    version='0.3.2',
     description='Ansible inventory script to aggregate other inventory sources',
     long_description=open('README.rst').read(),
     license='MIT',
@@ -14,7 +14,7 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
     install_requires = [
-        'ansible',
+        'ansible>=2.0.0.0',
         'requests',
         'click',
         'pyyaml',

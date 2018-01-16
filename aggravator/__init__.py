@@ -25,14 +25,18 @@ import sys
 from urllib.parse import (urlparse, urljoin) # pylint: disable=import-error
 
 # extras from packages
+import ansible
 import click
 import dpath.util
 import requests
 import yaml
 
 # Ansible stuff for Secrets
-import ansible.parsing.vault as vault
+from ansible.parsing.vault import is_encrypted as is_vault_encrypted
+from ansible.parsing.vault import VaultLib
+# Ansible utils
 from ansible.module_utils._text import to_text
+
 
 
 def get_config():
@@ -71,6 +75,27 @@ def create_links(environments, directory):
             click.echo("This symlink might already exist. Leaving it unchanged. Error: %s" % (err))
             errcount += 1
     return errcount
+
+
+class Vault(object):
+    '''Read an Ansible vault'''
+    def __init__(self, password):
+        self._ansible_ver = float('.'.join(ansible.__version__.split('.')[:2]))
+        self.secret = password.encode('utf-8')
+        self.vault = VaultLib(self._make_secrets(self.secret))
+
+    def _make_secrets(self, secret):
+        '''make ansible version appropriate secret'''
+        if self._ansible_ver < 2.4:
+            return secret
+
+        from ansible.constants import DEFAULT_VAULT_ID_MATCH
+        from ansible.parsing.vault import VaultSecret
+        return [(DEFAULT_VAULT_ID_MATCH, VaultSecret(secret))]
+
+    def decrypt(self, stream):
+        '''read vault stream and return decrypted'''
+        return self.vault.decrypt(stream)
 
 
 def fetch_data_remote(url, requestsobj=requests):
@@ -119,11 +144,12 @@ def fetch_data(uri, requestsobj=requests, data_type=None, vault_password=None):
         data = fetch_data_remote(uri, requestsobj)
     else:
         raise AttributeError("unsupported URI '{}'".format(uri))
-    if vault.is_encrypted(data):
+    if is_vault_encrypted(data):
         if vault_password is None:
             data = '{}'
         else:
-            data = vault.VaultLib(vault_password).decrypt(data)
+            vault = Vault(vault_password)
+            data = vault.decrypt(data)
     return parser(data)
 
 

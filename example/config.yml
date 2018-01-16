@@ -10,6 +10,8 @@ environments:
         key: windows/vars
       - path: prod_hostvars.yml
         key: _meta/hostvars
+      - path: vault.yml
+        key: all/vars
   dev:
     include:
       - dev_hosts.yml
