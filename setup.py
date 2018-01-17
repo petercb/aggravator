@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='aggravator',
-    version='0.3.2',
+    version='0.3.3',
     description='Ansible inventory script to aggregate other inventory sources',
     long_description=open('README.rst').read(),
     license='MIT',

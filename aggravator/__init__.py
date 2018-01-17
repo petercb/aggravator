@@ -287,7 +287,7 @@ class Inventory(object):
 @click.option(
     '--vault-password-file', 'vpfile', show_default=True,
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
-    envvar='VAULT_PASSWORD_FILE', default='~/.vault_pass.txt',
+    envvar='VAULT_PASSWORD_FILE', default=os.path.expanduser('~/.vault_pass.txt'),
     help='vault password file, if set to /dev/null secret decryption will be disabled'
 )
 @click.option('--list', is_flag=True, help='Print inventory information as a JSON object')
@@ -298,11 +298,7 @@ class Inventory(object):
     help='Create symlinks in DIRECTORY to the script for each platform name retrieved'
 )
 @click.option('--show', is_flag=True, help='Output a list of upstream environments')
-@click.option(
-    '--tree', is_flag=True,
-    help='Output a tree of what files will be loaded for an environment'
-)
-def cli(env, uri, vpfile, list, host, linkdir, show, tree):
+def cli(env, uri, vpfile, list, host, linkdir, show):
     '''Ansible file based dynamic inventory script'''
 
     # If vault password file is /dev/null, disable secrets decryption
@@ -325,20 +321,6 @@ def cli(env, uri, vpfile, list, host, linkdir, show, tree):
     elif show:
         click.echo("Upstream environments:")
         click.echo("\n".join(sorted(inv.fetch_environments())))
-        return 0
-
-    # Called with `--tree`
-    elif tree:
-        data = ''
-        if env is None:
-            data = yaml.dump(inv.config.get('environments', {}), default_flow_style=False)
-        else:
-            data = yaml.dump(
-                inv.config.get('environments', {}).get(env),
-                default_flow_style=False
-            )
-        click.echo(data)
-        return 0
 
     else:
         if env is None:
@@ -362,4 +344,3 @@ def cli(env, uri, vpfile, list, host, linkdir, show, tree):
                 return 1
 
             click.echo(json.dumps(data))
-            return 0
