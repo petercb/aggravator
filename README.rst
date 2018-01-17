@@ -151,7 +151,5 @@ Options:
 --createlinks DIRECTORY     Create symlinks in DIRECTORY to the script for
                             each platform name retrieved
 --show                      Output a list of upstream environments
---tree                      Output a tree of what files will be loaded for
-                            an environment
 --help                      Show this message and exit.
 
