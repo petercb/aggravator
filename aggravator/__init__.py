@@ -27,6 +27,7 @@ from urllib.parse import (urlparse, urljoin) # pylint: disable=import-error
 # extras from packages
 import ansible
 import click
+import deepmerge
 import dpath.util
 import requests
 import yaml
@@ -253,7 +254,7 @@ class Inventory(object):
                 # Pull it in and hope there are proper sections
                 # TODO: add some schema validation
                 from_file = self.fetch(inc)
-                dpath.util.merge(invdata, from_file, flags=dpath.util.MERGE_REPLACE)
+                invdata = deepmerge.always_merger.merge(invdata, from_file)
             elif isinstance(inc, dict):
                 # Dictionary listing, fetch file in `path` into keyspace `key`
                 from_file = self.fetch(inc['path'], inc.get('format'))
@@ -262,12 +263,12 @@ class Inventory(object):
                     key = inc['key']
                     try:
                         data = dpath.util.get(invdata, key)
-                        dpath.util.merge(data, from_file, flags=dpath.util.MERGE_REPLACE)
+                        data = deepmerge.always_merger.merge(data, from_file)
                     except KeyError:
                         dpath.util.new(invdata, key, from_file)
                 else:
                     # No keyspace defined, load the file into the root
-                    dpath.util.merge(invdata, from_file, flags=dpath.util.MERGE_REPLACE)
+                    invdata = deepmerge.always_merger.merge(invdata, from_file)
             else:
                 raise_for_type(inc, (str, dict), ':'.join(['', self.env, 'include']))
 

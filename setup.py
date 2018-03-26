@@ -18,6 +18,7 @@ setup(
         'requests',
         'click',
         'pyyaml',
+        'deepmerge',
         'dpath',
         'future'
     ],
