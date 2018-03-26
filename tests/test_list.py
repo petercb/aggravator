@@ -1,5 +1,5 @@
 import aggravator
-import json
+import yaml
 from click.testing import CliRunner
 
 def test_list():
@@ -11,7 +11,7 @@ def test_list():
         '--list'
     ])
     assert result.exit_code == 0
-    data = json.loads(result.output)
+    data = yaml.load(result.output)
     assert type(data) is dict
     assert type(data['all']) is dict
     assert type(data['all']['vars']) is dict

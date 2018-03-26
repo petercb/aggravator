@@ -290,6 +290,10 @@ class Inventory(object):
     envvar='VAULT_PASSWORD_FILE', default=os.path.expanduser('~/.vault_pass.txt'),
     help='vault password file, if set to /dev/null secret decryption will be disabled'
 )
+@click.option(
+    '--output-format', 'outformat', envvar='INVENTORY_FORMAT', show_default=True, default='yaml',
+    type=click.Choice(['yaml', 'json']), help='specify the output format'
+)
 @click.option('--list', is_flag=True, help='Print inventory information as a JSON object')
 @click.option('--host', help='Retrieve host variables (not implemented)')
 @click.option(
@@ -298,7 +302,7 @@ class Inventory(object):
     help='Create symlinks in DIRECTORY to the script for each platform name retrieved'
 )
 @click.option('--show', is_flag=True, help='Output a list of upstream environments')
-def cli(env, uri, vpfile, list, host, linkdir, show):
+def cli(env, uri, vpfile, outformat, list, host, linkdir, show):
     '''Ansible file based dynamic inventory script'''
 
     # If vault password file is /dev/null, disable secrets decryption
@@ -343,4 +347,10 @@ def cli(env, uri, vpfile, list, host, linkdir, show):
                 click.echo("Error: Missing parameter (--list or --host)?")
                 return 1
 
-            click.echo(json.dumps(data))
+            dumper = {
+                'json': getattr(json, 'dumps'),
+                'yaml': getattr(yaml, 'dump')
+            }
+            if outformat not in dumper:
+                raise AttributeError("Unsupported output data type: {}".format(outformat))
+            click.echo(dumper[outformat](data))
