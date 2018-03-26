@@ -122,6 +122,10 @@ executes when it is called by Ansible.
   create a symlink from `prod` to the `inventory` bin, it will assume the env
   you want to execute for is called `prod`, unless you override that.
 
+`INVENTORY_FORMAT`
+  Format to output in, defaults to YAML in >0.4
+  Previously only output in JSON
+
 `INVENTORY_URI`
   Location to the root config, if not in one of the standard locations
 
@@ -144,6 +148,7 @@ Options:
 --uri TEXT                  specify the URI to query for inventory config
                             file, supports file:// and http(s)://  [default:
                             /home/peterb-l/git/petercb/aggravator/venv/etc/config.yaml]
+--output-format [yaml|json] specify the output format  [default: yaml]
 --vault-password-file PATH  vault password file, if set to /dev/null secret
                             decryption will be disabled  [default: ~/.vault_pass.txt]
 --list                      Print inventory information as a JSON object
