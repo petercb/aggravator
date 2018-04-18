@@ -236,6 +236,14 @@ class Inventory(object):
     def generate_inventory(self):
         '''Generate inventory by merging hosts and variables'''
         # Set the basic structure
+        my_merger = deepmerge.Merger(
+            [
+                (list, ["override"]),
+                (dict, ["merge"])
+            ],
+            ["override"],
+            ["override"]
+        )
         invdata = {
             '_meta': {
                 'hostvars': {}
@@ -254,7 +262,7 @@ class Inventory(object):
                 # Pull it in and hope there are proper sections
                 # TODO: add some schema validation
                 from_file = self.fetch(inc)
-                invdata = deepmerge.always_merger.merge(invdata, from_file)
+                invdata = my_merger.merge(invdata, from_file)
             elif isinstance(inc, dict):
                 # Dictionary listing, fetch file in `path` into keyspace `key`
                 from_file = self.fetch(inc['path'], inc.get('format'))
@@ -263,12 +271,12 @@ class Inventory(object):
                     key = inc['key']
                     try:
                         data = dpath.util.get(invdata, key)
-                        data = deepmerge.always_merger.merge(data, from_file)
+                        data = my_merger.merge(data, from_file)
                     except KeyError:
                         dpath.util.new(invdata, key, from_file)
                 else:
                     # No keyspace defined, load the file into the root
-                    invdata = deepmerge.always_merger.merge(invdata, from_file)
+                    invdata = my_merger.merge(invdata, from_file)
             else:
                 raise_for_type(inc, (str, dict), ':'.join(['', self.env, 'include']))
 

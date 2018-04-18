@@ -12,6 +12,8 @@ before_script:
 - pip install -q -r test_requirements.txt
 script:
 - pytest -v --cov=aggravator --cov-report=term-missing --doctest-modules
+- inventory --help
+- INVENTORY_ENV=prod venv/bin/inventory --vault-password-file=/dev/null --uri=example/config.yml --list
 after_success:
 - coveralls
 deploy:
