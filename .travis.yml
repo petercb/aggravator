@@ -4,7 +4,7 @@ python:
 - '3.6'
 env:
 - ANSIBLE_VERSION=2.2.0.0
-- ANSIBLE_VERSION=2.4.2.0
+- ANSIBLE_VERSION=2.5.0.0
 install:
 - pip install -q ansible==$ANSIBLE_VERSION
 - pip install -q .
@@ -13,7 +13,7 @@ before_script:
 script:
 - pytest -v --cov=aggravator --cov-report=term-missing --doctest-modules
 - inventory --help
-- INVENTORY_ENV=prod venv/bin/inventory --vault-password-file=/dev/null --uri=example/config.yml --list
+- INVENTORY_ENV=prod inventory --vault-password-file=/dev/null --uri=example/config.yml --list
 after_success:
 - coveralls
 deploy:
