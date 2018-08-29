@@ -310,56 +310,60 @@ class Inventory(object):
     type=click.Path(exists=True, file_okay=False, writable=True),
     help='Create symlinks in DIRECTORY to the script for each platform name retrieved'
 )
-@click.option('--show', is_flag=True, help='Output a list of upstream environments')
+@click.option('--show', is_flag=True, help='Output a list of upstream environments (or groups if environment is set)')
 def cli(env, uri, vpfile, outformat, list, host, linkdir, show):
     '''Ansible file based dynamic inventory script'''
 
-    # If vault password file is /dev/null, disable secrets decryption
-    if vpfile == '/dev/null':
-        vpfile = None
-
-    # Read in the vault password if one was provided
-    if vpfile is not None:
-        vault_password = fetch_data_local(vpfile)
-    else:
-        vault_password = None
-
-    inv = Inventory(uri, env, vault_password)
-
     # Called with `--createlinks`
     if linkdir:
-        return create_links(inv.fetch_environments(), linkdir)
-
-    # Called with `--show`
-    elif show:
-        click.echo("Upstream environments:")
-        click.echo("\n".join(sorted(inv.fetch_environments())))
+        return create_links(Inventory(uri).fetch_environments(), linkdir)
 
     else:
         if env is None:
-            click.echo("Error: Missing environment, use --env or `export INVENTORY_ENV`")
-            return 1
-        else:
-            data = None
-
-            # Called with `--list`.
-            if list:
-                data = inv.generate_inventory()
-
-            # Called with `--host [hostname]`.
-            elif host:
-                # Not implemented, since we should return _meta info in `--list`.
-                data = {}
-
-            # require either --list or --host
+            if show:
+                click.echo("Upstream environments:")
+                click.echo("\n".join(sorted(Inventory(uri).fetch_environments())))
             else:
-                click.echo("Error: Missing parameter (--list or --host)?")
+                click.echo("Error: Missing environment, use --env or `export INVENTORY_ENV`")
                 return 1
+        else:
+            if show:
+                grouplist = Inventory(uri, env).generate_inventory().keys()
+                grouplist.remove('_meta')
+                click.echo("\n".join(sorted(grouplist)))
+            else:
+                # If vault password file is /dev/null, disable secrets decryption
+                if vpfile == '/dev/null':
+                    vpfile = None
 
-            dumper = {
-                'json': getattr(json, 'dumps'),
-                'yaml': getattr(yaml, 'dump')
-            }
-            if outformat not in dumper:
-                raise AttributeError("Unsupported output data type: {}".format(outformat))
-            click.echo(dumper[outformat](data))
+                # Read in the vault password if one was provided
+                if vpfile is not None:
+                    vault_password = fetch_data_local(vpfile)
+                else:
+                    vault_password = None
+
+                inv = Inventory(uri, env, vault_password)
+
+                data = None
+
+                # Called with `--list`.
+                if list:
+                    data = inv.generate_inventory()
+
+                # Called with `--host [hostname]`.
+                elif host:
+                    # Not implemented, since we should return _meta info in `--list`.
+                    data = {}
+
+                # require either --list or --host
+                else:
+                    click.echo("Error: Missing parameter (--list or --host)?")
+                    return 1
+
+                dumper = {
+                    'json': getattr(json, 'dumps'),
+                    'yaml': getattr(yaml, 'dump')
+                }
+                if outformat not in dumper:
+                    raise AttributeError("Unsupported output data type: {}".format(outformat))
+                click.echo(dumper[outformat](data))

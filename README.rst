@@ -155,6 +155,6 @@ Options:
 --host TEXT                 Retrieve host variables (not implemented)
 --createlinks DIRECTORY     Create symlinks in DIRECTORY to the script for
                             each platform name retrieved
---show                      Output a list of upstream environments
+--show                      Output a list of upstream environments (or groups if environment was set)
 --help                      Show this message and exit.
 
