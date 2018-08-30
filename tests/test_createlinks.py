@@ -7,7 +7,6 @@ def test_createlinks():
     conf_file = os.path.abspath('example/config.yml')
     with runner.isolated_filesystem():
         result = runner.invoke(aggravator.cli, [
-            '--vault-password-file=/dev/null',
             '--uri=' + conf_file,
             '--createlinks=.'
         ])

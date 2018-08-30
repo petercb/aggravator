@@ -201,7 +201,7 @@ class Inventory(object):
 
     def fetch_environments(self):
         '''Fetch a list of environments that are defined upstream'''
-        return list(self.config.get('environments', {}).keys())
+        return list(self.config.get('environments', {}))
 
     def fetch(self, uri, data_type=None):
         '''fetch the requested uri'''
@@ -303,15 +303,15 @@ class Inventory(object):
     '--output-format', 'outformat', envvar='INVENTORY_FORMAT', show_default=True, default='yaml',
     type=click.Choice(['yaml', 'json']), help='specify the output format'
 )
-@click.option('--list', is_flag=True, help='Print inventory information as a JSON object')
+@click.option('--list', 'list_flag', is_flag=True, help='Print inventory information as a JSON object')
 @click.option('--host', help='Retrieve host variables (not implemented)')
 @click.option(
     '--createlinks', 'linkdir',
     type=click.Path(exists=True, file_okay=False, writable=True),
     help='Create symlinks in DIRECTORY to the script for each platform name retrieved'
 )
-@click.option('--show', is_flag=True, help='Output a list of upstream environments (or groups if environment is set)')
-def cli(env, uri, vpfile, outformat, list, host, linkdir, show):
+@click.option('--show', 'show_flag', is_flag=True, help='Output a list of upstream environments (or groups if environment is set)')
+def cli(env, uri, vpfile, outformat, list_flag, host, linkdir, show_flag):
     '''Ansible file based dynamic inventory script'''
 
     # Called with `--createlinks`
@@ -320,15 +320,15 @@ def cli(env, uri, vpfile, outformat, list, host, linkdir, show):
 
     else:
         if env is None:
-            if show:
+            if show_flag:
                 click.echo("Upstream environments:")
                 click.echo("\n".join(sorted(Inventory(uri).fetch_environments())))
             else:
                 click.echo("Error: Missing environment, use --env or `export INVENTORY_ENV`")
                 return 1
         else:
-            if show:
-                grouplist = Inventory(uri, env).generate_inventory().keys()
+            if show_flag:
+                grouplist = list(Inventory(uri, env).generate_inventory())
                 grouplist.remove('_meta')
                 click.echo("\n".join(sorted(grouplist)))
             else:
@@ -342,13 +342,11 @@ def cli(env, uri, vpfile, outformat, list, host, linkdir, show):
                 else:
                     vault_password = None
 
-                inv = Inventory(uri, env, vault_password)
-
                 data = None
 
                 # Called with `--list`.
-                if list:
-                    data = inv.generate_inventory()
+                if list_flag:
+                    data = Inventory(uri, env, vault_password).generate_inventory()
 
                 # Called with `--host [hostname]`.
                 elif host:
