@@ -56,11 +56,9 @@ def get_config():
 
 def get_environment():
     '''Determine the platform/environment name from name of called script'''
-    myname = os.path.basename(sys.argv[0])
-    if myname != 'inventory':
-        return myname
-    else:
-        return None
+    if os.path.islink(sys.argv[0]):
+        return os.path.basename(sys.argv[0])
+    return None
 
 
 def create_links(environments, directory):
