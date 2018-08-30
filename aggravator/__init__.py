@@ -293,6 +293,7 @@ class Inventory(object):
 )
 @click.option(
     '--vault-password-file', 'vpfile', show_default=True,
+    type=click.Path(exists=False, dir_okay=False, file_okay=True, readable=True, resolve_path=True),
     envvar='VAULT_PASSWORD_FILE', default=os.path.expanduser('~/.vault_pass.txt'),
     help='vault password file, if set to /dev/null secret decryption will be disabled'
 )
@@ -304,7 +305,7 @@ class Inventory(object):
 @click.option('--host', help='Retrieve host variables (not implemented)')
 @click.option(
     '--createlinks', 'linkdir',
-    type=click.Path(exists=True, file_okay=False, writable=True),
+    type=click.Path(exists=True, dir_okay=True, file_okay=False, writable=True),
     help='Create symlinks in DIRECTORY to the script for each platform name retrieved'
 )
 @click.option('--show', 'show_flag', is_flag=True, help='Output a list of upstream environments (or groups if environment is set)')
