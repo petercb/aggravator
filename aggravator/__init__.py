@@ -293,7 +293,6 @@ class Inventory(object):
 )
 @click.option(
     '--vault-password-file', 'vpfile', show_default=True,
-    type=click.Path(exists=True, dir_okay=False, resolve_path=True),
     envvar='VAULT_PASSWORD_FILE', default=os.path.expanduser('~/.vault_pass.txt'),
     help='vault password file, if set to /dev/null secret decryption will be disabled'
 )
