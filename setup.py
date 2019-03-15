@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='aggravator',
-    version='0.4.3',
+    version='0.4.4',
     description='Ansible inventory script to aggregate other inventory sources',
     long_description=open('README.rst').read(),
     license='MIT',
@@ -15,12 +15,12 @@ setup(
     tests_require=['pytest'],
     install_requires = [
         'ansible>=2.0.0.0',
-        'requests',
         'click',
-        'pyyaml',
         'deepmerge',
         'dpath',
         'future'
+        'pyyaml',
+        'requests',
     ],
     entry_points={
         'console_scripts': [

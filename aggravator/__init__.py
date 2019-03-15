@@ -18,7 +18,9 @@ from builtins import object # pylint: disable=redefined-builtin
 # stdlib
 import json
 import os
+import subprocess
 import sys
+import tempfile
 
 ## This is the python3 name, formerly urlparse, install_aliases() above make
 ## this work under python2
@@ -125,7 +127,7 @@ def fetch_data(uri, requestsobj=requests, data_type=None, vault_password=None):
     uriobj = urlparse(uri)
     loader = {
         'json': getattr(json, 'loads'),
-        'yaml': getattr(yaml, 'load')
+        'yaml': getattr(yaml, 'safe_load')
     }
     if data_type is None:
         # guess the data type from file extension
@@ -145,11 +147,23 @@ def fetch_data(uri, requestsobj=requests, data_type=None, vault_password=None):
         raise AttributeError("unsupported URI '{}'".format(uri))
     if is_vault_encrypted(data):
         if vault_password is None:
-            data = '{}'
+            return {}
         else:
             vault = Vault(vault_password)
-            data = vault.decrypt(data)
-    return parser(data)
+            data = parser(vault.decrypt(data))
+    else:
+        temp_data = parser(data)
+        if 'sops' in temp_data:
+            with tempfile.NamedTemporaryFile(suffix='.'+data_type) as temp:
+                temp.write(data)
+                temp.flush()
+                data = subprocess.check_output(["sops", "-d", temp.name])
+                data = parser(data)
+                data.pop('sops', None)
+        else:
+            data = parser(data)
+
+    return data
 
 
 def raise_for_type(item, types, section):

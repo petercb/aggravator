@@ -4,7 +4,7 @@ python:
 - '3.6'
 env:
 - ANSIBLE_VERSION=2.2.0.0
-- ANSIBLE_VERSION=2.5.0.0
+- ANSIBLE_VERSION=2.5.6.0
 install:
 - pip install -q ansible==$ANSIBLE_VERSION
 - pip install -q .
@@ -24,4 +24,4 @@ deploy:
   on:
     tags: true
     python: 3.6
-    condition: $ANSIBLE_VERSION = 2.5.0.0
+    condition: $ANSIBLE_VERSION = 2.5.6.0
