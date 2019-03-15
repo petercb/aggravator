@@ -10,6 +10,7 @@ install:
 - pip install -q .
 before_script:
 - pip install -q -r test_requirements.txt
+- pip list
 script:
 - pytest -v --cov=aggravator --cov-report=term-missing --doctest-modules
 - inventory --help
